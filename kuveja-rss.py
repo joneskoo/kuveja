@@ -9,15 +9,18 @@ import glob
 from datetime import datetime
 from meta import readmeta
 
-title = 'joneskoon kuvafeedi'
-description = u'Kuveja joneskoon elämän varrelta. Live as it happens.'
-rooturl = 'http://joneskoo.kapsi.fi/kuveja'
-url = 'http://joneskoo.kapsi.fi/'
-rssfile = 'feed.rss'
-globfilter = '*.[Jj][pP][gG]'
+# RSS config
+TITLE = 'joneskoon kuvafeedi'
+DESCRIPTION = u'Kuveja joneskoon elämän varrelta. Live as it happens.'
+ROOTURL = 'http://joneskoo.kapsi.fi/kuveja'
+LINKURL = 'http://joneskoo.kapsi.fi/'
+RSSFILE = 'feed.rss'
+HTML_TEMPLATE = '/home/users/joneskoo/kuveja/template.html'
+GLOBFILTER = '*.[Jj][pP][gG]'
+PICCOUNT = 20
 
 try:
-    if os.stat('.').st_mtime - os.stat(rssfile).st_mtime < 0:
+    if os.stat('.').st_mtime - os.stat(RSSFILE).st_mtime < 0:
         # Ei tarvi päivittää
         sys.exit(0)
 except OSError:
@@ -38,7 +41,7 @@ except sqlite3.OperationalError:
 import PyRSS2Gen
 
 items = []
-files = glob.glob(globfilter)
+files = glob.glob(GLOBFILTER)
 files.sort(key=lambda x: (-os.stat(x).st_mtime, x))
 
 def is_new_file(file):
@@ -78,20 +81,11 @@ for file, timestamp, meta in cur:
 import simplejson
 simplejson.dump(metadatas, open('kuveja.json', 'w'))
 
-html = u'''<html>
-<head>
- <title>%s</title>
- <link rel="alternate" title="kuveja RSS" href="http://joneskoo.kapsi.fi/kuveja.rss" type="application/rss+xml">
- <link rel="stylesheet" href="style.css" type="text/css" media="screen"/> 
-</head>
-<body>
- <h1>%s</h1>
- <p>%s</p>''' % (title, title, description)
-
-for d in metadatas[:35]:
-    d['link'] = "%s/%s" % (rooturl, d['file'])
+pichtml = ""
+for d in metadatas[:PICCOUNT]:
+    d['link'] = "%s/%s" % (ROOTURL, d['file'])
     itemhtml = '<p><img alt="%(link)s" src="%(link)s" /></p>%(meta)s' % d
-    html += "<h3>%s</h3>%s" % (d['file'], itemhtml)
+    pichtml += "<h3>%s</h3>%s" % (d['file'], itemhtml)
     r = PyRSS2Gen.RSSItem(
         title = d['file'],
         description = itemhtml,
@@ -99,16 +93,18 @@ for d in metadatas[:35]:
         pubDate = d['timestamp'])
     items.append(r)
 
-html += "</body></html>"
+template = open(HTML_TEMPLATE).read().decode("UTF-8")
+html = template.replace("__KUVEJA_INITIAL_PICS__", pichtml).replace(
+                        "__KUVEJA_PIC_COUNT__", str(PICCOUNT))
 open('index.html', 'w').write(html.encode("UTF-8"))
 
 rss = PyRSS2Gen.RSS2(
-    title = title,
-    link = url,
-    description = description,
+    title = TITLE,
+    link = LINKURL,
+    description = DESCRIPTION,
     lastBuildDate = datetime.now(),
     items = items)
-rss.write_xml(open(rssfile, "w"))
+rss.write_xml(open(RSSFILE, "w"))
 
 con.close()
 sys.exit(0)

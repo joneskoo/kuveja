@@ -1,0 +1,38 @@
+<html>
+<head>
+ <title>joneskoon kuvafeedi</title>
+ <link rel="alternate" title="kuveja RSS" href="http://joneskoo.kapsi.fi/kuveja.rss" type="application/rss+xml">
+ <link rel="stylesheet" href="style.css" type="text/css" media="screen"/> 
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script> 
+<script type="text/javascript"> 
+var kuveja;
+var index = __KUVEJA_PIC_COUNT__;
+$(document).ready(function() {
+    $.getJSON('kuveja.json', function(data) {
+        kuveja = data;
+    });
+
+    $(window).scroll(function(){
+        var pixels_to_bottom = ($(document).height() - $(window).height()) - $(window).scrollTop();
+        if (pixels_to_bottom < 100){
+            load_bottom();
+        }
+    });
+});
+
+function load_bottom() {
+    var k = kuveja[index++];
+    var html = "<h3>" + k['file'] + "</h3><p><img src=\"" + k['file'] + "\" /></p>" + k['meta'];
+    $('#bottom').replaceWith(html + "<div id=\"bottom\">&nbsp;</div>");
+    $(window).scroll();
+}
+</script> 
+</head>
+<body>
+ <h1>joneskoon kuvafeedi</h1>
+ <p>Kuveja joneskoon elämän varrelta. Live as it happens.</p>
+ 
+__KUVEJA_INITIAL_PICS__
+ 
+ <div id="bottom">&nbsp;</div>
+</body></html>
