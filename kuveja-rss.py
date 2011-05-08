@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #encoding: UTF-8
 # Joonas Kuorilehto 2009-2011
 
@@ -6,11 +6,10 @@ import os
 import sys
 import time
 import glob
-from datetime import datetime
-from meta import readmeta
 
+DB_URI = 'kuveja.sqlite'
 title = 'joneskoon kuvafeedi'
-description = u'Kuveja joneskoon elämän varrelta. Live as it happens.'
+description = 'Kuveja joneskoon elämän varrelta. Live as it happens.'
 rooturl = 'http://joneskoo.kapsi.fi/kuveja'
 url = 'http://joneskoo.kapsi.fi/'
 rssfile = 'feed.rss'
@@ -24,46 +23,54 @@ except OSError:
     # Tiedostoa ei kait ollut
     pass
 
+from datetime import datetime
 import sqlite3
 
-con = sqlite3.connect("kuveja.sqlite")
+#from meta import readmeta
+
+def readmeta(name):
+    '''PLACEHOLDER, no python3 exif library'''
+    return "", None
+
+import rss
+
+con = sqlite3.connect(DB_URI)
 cur = con.cursor()
+
+existing_files = []
 try:
     cur.execute("select file from kuveja")
-    existing_files = map(lambda x: x[0], list(cur))
+    existing_files = list(map(lambda x: x[0], list(cur)))
 except sqlite3.OperationalError:
     cur.execute("create table kuveja(file, timestamp, meta)")
-    existing_files = []
-
-import PyRSS2Gen
 
 items = []
 files = glob.glob(globfilter)
 files.sort(key=lambda x: (-os.stat(x).st_mtime, x))
 
-def is_new_file(file):
-    if file not in existing_files:
+def is_new_file(name):
+    if name not in existing_files:
         return True
     return False
 
-def is_file_deleted(file):
-    if file not in files:
+def is_file_deleted(name):
+    if name not in files:
         return True
     return False
 
 new_files = filter(is_new_file, files)
 deleted_files = filter(is_file_deleted, existing_files)
 
-for file in deleted_files:
-    cur.execute("delete from kuveja where file = ?", (file,))
+for name in deleted_files:
+    cur.execute("delete from kuveja where file = ?", (name,))
 
-for file in new_files:
-    mtime = os.stat(file).st_mtime
-    meta, timestamp = readmeta(file)
+for name in new_files:
+    mtime = os.stat(name).st_mtime
+    meta, timestamp = readmeta(name)
     if not timestamp:
         timestamp = datetime.utcfromtimestamp(mtime)
     cur.execute("insert into kuveja(file, timestamp, meta) values (?, ?, ?)",
-            (file, timestamp, meta))
+            (name, timestamp, meta))
 con.commit()
 
 cur.execute("select file, timestamp, meta from kuveja order by timestamp desc")
@@ -75,10 +82,10 @@ for file, timestamp, meta in cur:
     d['meta'] = meta
     metadatas.append(d)
 
-import simplejson
-simplejson.dump(metadatas, open('kuveja.json', 'w'))
+import json
+json.dump(metadatas, open('kuveja.json', 'w'))
 
-html = u'''<html>
+html = '''<html>
 <head>
  <title>%s</title>
  <link rel="alternate" title="kuveja RSS" href="http://joneskoo.kapsi.fi/kuveja.rss" type="application/rss+xml">
@@ -88,28 +95,27 @@ html = u'''<html>
  <h1>%s</h1>
  <p>%s</p>''' % (title, title, description)
 
+channel = rss.Channel('joneskoon kuvafeedi',
+                      'http://joneskoo.kapsi.fi/feed.rss',
+                      'Kuveja joneskoon elämän varrelta. Live as it happens.',
+                      generator = 'rss.py',
+                      pubdate = datetime.now(),
+                      language = 'fi-FI')
+
 for d in metadatas[:35]:
     d['link'] = "%s/%s" % (rooturl, d['file'])
-    itemhtml = '<p><img alt="%(link)s" src="%(link)s" /></p>%(meta)s' % d
+    itemhtml = '<p><img alt="%(file)s" src="%(file)s" /></p>%(meta)s' % d
     html += "<h3>%s</h3>%s" % (d['file'], itemhtml)
-    r = PyRSS2Gen.RSSItem(
-        title = d['file'],
-        description = itemhtml,
-        link = d['link'],
-        pubDate = d['timestamp'])
-    items.append(r)
+    it = rss.Item(channel,
+        title=d['file'],
+        link=d['link'],
+        description=itemhtml)
+    channel.additem(it)
 
 html += "</body></html>"
-open('index.html', 'w').write(html.encode("UTF-8"))
-
-rss = PyRSS2Gen.RSS2(
-    title = title,
-    link = url,
-    description = description,
-    lastBuildDate = datetime.now(),
-    items = items)
-rss.write_xml(open(rssfile, "w"))
+open('index.html', 'w').write(html)
 
 con.close()
-sys.exit(0)
 
+with open(rssfile, "w") as f:
+    f.write(channel.toxml())
