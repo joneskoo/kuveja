@@ -35,14 +35,13 @@ try:
     cur.execute("select file from kuveja")
     existing_files = map(lambda x: x[0], list(cur))
 except sqlite3.OperationalError:
-    cur.execute("create table kuveja(file, timestamp, meta)")
+    cur.execute("create table kuveja(file, timestamp, meta, mtime)")
     existing_files = []
 
 import PyRSS2Gen
 
 items = []
 files = glob.glob(GLOBFILTER)
-files.sort(key=lambda x: (-os.stat(x).st_mtime, x))
 
 def is_new_file(file):
     if file not in existing_files:
@@ -61,20 +60,22 @@ for file in deleted_files:
     cur.execute("delete from kuveja where file = ?", (file,))
 
 for file in new_files:
-    mtime = os.stat(file).st_mtime
+    mtime = datetime.utcfromtimestamp(os.stat(file).st_mtime)
     meta, timestamp = readmeta(file)
+    # If EXIF capture time is not available, use mtime
     if not timestamp:
-        timestamp = datetime.utcfromtimestamp(mtime)
-    cur.execute("insert into kuveja(file, timestamp, meta) values (?, ?, ?)",
-            (file, timestamp, meta))
+        timestamp = mtime
+    cur.execute("insert into kuveja(file, timestamp, meta, mtime) "+ \
+                "values (?, ?, ?, ?)", (file, timestamp, meta, mtime))
 con.commit()
 
-cur.execute("select file, timestamp, meta from kuveja order by timestamp desc")
+# Order by mtime, but use capture time
+cur.execute("select file, timestamp, meta from kuveja order by mtime desc")
 metadatas = []
 for file, timestamp, meta in cur:
     d = {}
     d['file'] = file
-    d['timestamp'] = timestamp
+    d['timestamp'] = unicode(timestamp)
     d['meta'] = meta
     metadatas.append(d)
 
