@@ -10,7 +10,11 @@ PREFIX = 'http://joneskoo.kapsi.fi/kuveja/'
 HEADER = """---
 layout: main
 title: joneskoon kuvafeedi
----"""
+rss: http://joneskoo.kapsi.fi/kuveja.rss
+---
+<p>Kuveja joneskoon elämän varrelta.
+Saatavana myös <a href="http://joneskoo.kapsi.fi/kuveja.rss">RSS:nä</a>.</p>
+"""
 HTML = """<div class="kuva">
     <h3>%(title)s</h3>
     <img src="%(url)s" alt="%(title)s" />
