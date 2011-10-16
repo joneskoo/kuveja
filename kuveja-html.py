@@ -26,5 +26,5 @@ def main():
         url = PREFIX + d['file']
         print(HTML % vars())
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     main()
