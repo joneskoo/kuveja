@@ -15,7 +15,42 @@ HTML = """<div class="kuva">
     <h3>%(title)s</h3>
     <img src="%(url)s" alt="%(title)s" />
 </div>"""
-FOOTER = "<div class='clear' id='endkuveja'></div>"
+FOOTER = """
+<div class='clear' id='endkuveja'></div>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"
+        type="text/javascript"></script>
+<script language="Javascript" type="text/javascript">
+//<![CDATA[
+
+var kuveja;
+var index = 10;
+var prefix = "/kuveja/";
+var template;
+
+function load_bottom () {
+    var k = kuveja[index++];
+    var html = template.clone();
+    $("h3", html)[0].textContent = k['file'];
+    var img = $("img", html)[0]
+    img.src = prefix + k['file'];
+    img.alt = k['file'];
+    $("#content").append(html);
+}
+
+$(document).ready(function() {
+    $.getJSON('/kuveja/kuveja.json', function(data) { kuveja = data; });
+    template = $("div.kuva:first");
+
+    $(window).scroll(function(){
+        var pixels_to_bottom = ($(document).height() - $(window).height()) - $(window).scrollTop();
+        if (pixels_to_bottom < 100){
+            load_bottom();
+        }
+    });
+});
+//]]>
+</script>
+"""
 
 def main():
     with open(FILE) as f:
