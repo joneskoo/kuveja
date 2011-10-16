@@ -15,7 +15,7 @@ HTML = """<div class="kuva">
     <h3>%(title)s</h3>
     <img src="%(url)s" alt="%(title)s" />
 </div>"""
-FOOTER = "<div class='clear' id='endspan'></div>"
+FOOTER = "<div class='clear' id='endkuveja'></div>"
 
 def main():
     with open(FILE) as f:
