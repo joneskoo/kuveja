@@ -15,7 +15,7 @@ rss: http://joneskoo.kapsi.fi/kuveja.rss
 <p>Kuveja joneskoon elämän varrelta.
 Saatavana myös <a href="http://joneskoo.kapsi.fi/kuveja.rss">RSS:nä</a>.</p>
 
-<div class="kuveja">
+<div id="kuveja">
 """
 HTML = """  <div class="kuva">
     <h3>%(title)s</h3>
@@ -42,7 +42,7 @@ function load_bottom () {
     var img = $("img", html)[0]
     img.src = prefix + k['file'];
     img.alt = k['file'];
-    $("#content").append(html);
+    $("#kuveja").append(html);
 }
 
 $(document).ready(function() {
