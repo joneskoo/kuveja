@@ -14,13 +14,17 @@ rss: http://joneskoo.kapsi.fi/kuveja.rss
 ---
 <p>Kuveja joneskoon elämän varrelta.
 Saatavana myös <a href="http://joneskoo.kapsi.fi/kuveja.rss">RSS:nä</a>.</p>
+
+<div class="kuveja">
 """
-HTML = """<div class="kuva">
+HTML = """  <div class="kuva">
     <h3>%(title)s</h3>
     <img src="%(url)s" alt="%(title)s" />
-</div>"""
+  </div>"""
 FOOTER = """
-<div class='clear' id='endkuveja'></div>
+  <div class='clear' id='endkuveja'></div>
+</div>
+
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"
         type="text/javascript"></script>
 <script language="Javascript" type="text/javascript">
