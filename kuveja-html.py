@@ -15,6 +15,7 @@ HTML = """<div class="kuva">
     <h3>%(title)s</h3>
     <img src="%(url)s" alt="%(title)s" />
 </div>"""
+FOOTER = "<div class='clear' id='endspan'></div>"
 
 def main():
     with open(FILE) as f:
@@ -25,6 +26,7 @@ def main():
         title = d['file']
         url = PREFIX + d['file']
         print(HTML % vars())
+    print(FOOTER)
 
 if __name__ == '__main__':
     main()
