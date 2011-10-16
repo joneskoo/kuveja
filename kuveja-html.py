@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import json
+from sys import argv
 
-FILE = 'kuveja.json'
+if len(argv) > 1:
+    FILE = argv[1]
+else:
+    FILE = 'kuveja.json'
 PREFIX = 'http://joneskoo.kapsi.fi/kuveja/'
 HEADER = """---
 layout: main
@@ -12,12 +16,15 @@ HTML = """<div class="kuva">
     <img src="%(url)s" alt="%(title)s" />
 </div>"""
 
+def main():
+    with open(FILE) as f:
+        data = json.load(f)
 
-with open(FILE) as f:
-    data = json.load(f)
+    print(HEADER)
+    for d in data[0:10]:
+        title = d['file']
+        url = PREFIX + d['file']
+        print(HTML % vars())
 
-print(HEADER)
-for d in data[0:10]:
-    title = d['file']
-    url = PREFIX + d['file']
-    print(HTML % vars())
+if __name__ = '__main__':
+    main()
