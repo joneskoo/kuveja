@@ -33,11 +33,10 @@ FOOTER = """
 var kuveja;
 var index = 10;
 var prefix = "/kuveja/";
-var template;
 
 function load_bottom () {
     var k = kuveja[index++];
-    var html = template.clone();
+    var html = $('<div class="kuva"><h3></h3><img/></div>');
     $("h3", html)[0].textContent = k['file'];
     var img = $("img", html)[0]
     img.src = prefix + k['file'];
@@ -47,7 +46,6 @@ function load_bottom () {
 
 $(document).ready(function() {
     $.getJSON('/kuveja/kuveja.json', function(data) { kuveja = data; });
-    template = $("div.kuva:first");
 
     $(window).scroll(function(){
         var pixels_to_bottom = ($(document).height() - $(window).height()) - $(window).scrollTop();
