@@ -54,6 +54,8 @@ HTMLIMG = """  <div class="kuva">
   </div>"""
 
 class Cache:
+    # TODO: configurable database fields
+    # TODO: metadata function should be passed as a callback or something
     existing_files = []
 
     def __init__(self, dbfile):
@@ -81,10 +83,6 @@ class Cache:
         existing = self.existing_files
         new_files = [x for x in files if not_in(x, existing)]
         deleted_files = [x for x in existing if not_in(x, existing)]
-        # print "list", files
-        # print "existing", existing
-        # print "deleted", deleted_files
-        # print "new", new_files
 
         # Remove files that no longer exist
         for fname in deleted_files:
@@ -114,7 +112,7 @@ class Cache:
             metadatas.append(d)
         return metadatas
 
-    def __destructor__(self):
+    def __del__(self):
         self.con.close()
 
 def update_needed():
