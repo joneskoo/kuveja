@@ -16,7 +16,8 @@ DESCRIPTION = u'Kuveja joneskoon elämän varrelta. Live as it happens.'
 ROOTURL = 'http://joneskoo.kapsi.fi/kuveja'
 LINKURL = 'http://joneskoo.kapsi.fi/'
 RSSFILE = 'feed.rss'
-HTML_TEMPLATE = '/home/users/joneskoo/kuveja/template.html'
+SCRIPT_PATH = os.path.dirname(__file__)
+HTML_TEMPLATE = os.path.join(SCRIPT_PATH, 'template.html')
 GLOBFILTER = '*.[Jj][pP][gG]'
 PICCOUNT = 20
 
