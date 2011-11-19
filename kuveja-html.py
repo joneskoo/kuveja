@@ -49,7 +49,9 @@ $(document).ready(function() {
 
     $(window).scroll(function(){
         var pixels_to_bottom = ($(document).height() - $(window).height()) - $(window).scrollTop();
-        if (pixels_to_bottom < 100){
+        if (pixels_to_bottom < 250){
+            load_bottom();
+            load_bottom();
             load_bottom();
         }
     });
