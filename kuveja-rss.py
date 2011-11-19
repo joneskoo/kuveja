@@ -17,7 +17,6 @@ ROOTURL = 'http://joneskoo.kapsi.fi/kuveja'
 LINKURL = 'http://joneskoo.kapsi.fi/'
 RSSFILE = 'feed.rss'
 SCRIPT_PATH = os.path.dirname(__file__)
-HTML_TEMPLATE = os.path.join(SCRIPT_PATH, 'template.html')
 GLOBFILTER = '*.[Jj][pP][gG]'
 PICCOUNT = 20
 
@@ -95,11 +94,6 @@ for d in metadatas[:PICCOUNT]:
         pubDate = d['timestamp'])
     items.append(r)
 
-template = open(HTML_TEMPLATE).read().decode("UTF-8")
-html = template.replace("__KUVEJA_INITIAL_PICS__", pichtml).replace(
-                        "__KUVEJA_PIC_COUNT__", str(PICCOUNT))
-open('index.html', 'w').write(html.encode("UTF-8"))
-
 rss = PyRSS2Gen.RSS2(
     title = TITLE,
     link = LINKURL,
@@ -110,4 +104,3 @@ rss.write_xml(open(RSSFILE, "w"))
 
 con.close()
 sys.exit(0)
-
