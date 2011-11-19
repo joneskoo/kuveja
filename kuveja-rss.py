@@ -4,6 +4,7 @@
 
 import os
 import sys
+import json
 import time
 import glob
 from datetime import datetime
@@ -79,8 +80,7 @@ for file, timestamp, meta in cur:
     d['meta'] = meta
     metadatas.append(d)
 
-import simplejson
-simplejson.dump(metadatas, open('kuveja.json', 'w'))
+json.dump(metadatas, open('kuveja.json', 'w'))
 
 pichtml = ""
 for d in metadatas[:PICCOUNT]:
