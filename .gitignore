@@ -1,2 +1,4 @@
 *.pyc
 kuveja.sqlite
+images
+output
