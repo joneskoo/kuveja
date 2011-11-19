@@ -4,103 +4,151 @@
 
 import os
 import sys
-import json
-import time
 import glob
+import sqlite3
+import time
+import PyRSS2Gen
 from datetime import datetime
+import ConfigParser
+try:
+    import json
+except:
+    import simplejson as json
+
 from meta import readmeta
 
-# RSS config
-TITLE = 'joneskoon kuvafeedi'
-DESCRIPTION = u'Kuveja joneskoon elämän varrelta. Live as it happens.'
-ROOTURL = 'http://joneskoo.kapsi.fi/kuveja'
-LINKURL = 'http://joneskoo.kapsi.fi/'
-RSSFILE = 'feed.rss'
-SCRIPT_PATH = os.path.dirname(__file__)
-GLOBFILTER = '*.[Jj][pP][gG]'
-PICCOUNT = 20
+mypath = os.path.dirname(__file__)
 
-try:
-    if os.stat('.').st_mtime - os.stat(RSSFILE).st_mtime < 0:
-        # Ei tarvi päivittää
-        sys.exit(0)
-except OSError:
-    # Tiedostoa ei kait ollut
-    pass
+# Read configs
+config = ConfigParser.ConfigParser()
+config.read(os.path.join(mypath, 'kuveja.cfg'))
+config.read(['kuveja.cfg', os.path.expanduser('~/.kuveja.cfg')])
 
-import sqlite3
+INPUTDIR = config.get('source', 'inputdir')
+GLOBFILTER = config.get('source', 'globfilter')
+OUTPUTDIR = config.get('target', 'outputdir')
+TITLE = config.get('rss', 'title')
+DESCRIPTION = config.get('rss', 'description')
+ROOTURL = config.get('rss', 'mediaurl')
+LINKURL = config.get('rss', 'linkurl')
+RSSFILE = config.get('target', 'rssname')
+JSONFILE = config.get('target', 'jsonname')
+RSSCOUNT = config.getint('rss', 'count')
+DBFILE = config.get('cache', 'db')
 
-con = sqlite3.connect("kuveja.sqlite")
-cur = con.cursor()
-try:
-    cur.execute("select file from kuveja")
-    existing_files = map(lambda x: x[0], list(cur))
-except sqlite3.OperationalError:
-    cur.execute("create table kuveja(file, timestamp, meta, mtime)")
+class Cache:
     existing_files = []
 
-import PyRSS2Gen
+    def __init__(self, dbfile):
+        self.con = sqlite3.connect(dbfile)
+        self.read_existing_files()
 
-items = []
-files = glob.glob(GLOBFILTER)
+    def read_existing_files(self):
+        cur = self.con.cursor()
+        try:
+            cur.execute("select file from kuveja")
+            existing_files = [x[0] for x in cur]
+        except sqlite3.OperationalError:
+            # Assume the table was missing
+            cur.execute("create table kuveja(file, timestamp, meta, mtime)")
+            existing_files = []
+        self.existing_files = existing_files
 
-def is_new_file(file):
-    if file not in existing_files:
-        return True
-    return False
+    def update(self, files):
+        def not_in(fname, files):
+            if fname not in files:
+                return True
+            return False
 
-def is_file_deleted(file):
-    if file not in files:
-        return True
-    return False
+        new_files = [x for x in files if not_in(x, files)]
+        existing = self.existing_files
+        deleted_files = [x for x in existing if not_in(x, existing)]
 
-new_files = filter(is_new_file, files)
-deleted_files = filter(is_file_deleted, existing_files)
+        # Remove files that no longer exist
+        for fname in deleted_files:
+            cur.execute("delete from kuveja where file = ?", (fname,))
 
-for file in deleted_files:
-    cur.execute("delete from kuveja where file = ?", (file,))
+        # Read metadata of existing files into cache
+        for fname in new_files:
+            mtime = datetime.utcfromtimestamp(os.stat(fname).st_mtime)
+            meta, timestamp = readmeta(fname)
+            # If EXIF capture time is not available, use mtime
+            if not timestamp:
+                timestamp = mtime
+            cur.execute("insert into kuveja(file, timestamp, meta, mtime) "+ \
+                        "values (?, ?, ?, ?)", (fname, timestamp, meta, mtime))
+        self.con.commit()
 
-for file in new_files:
-    mtime = datetime.utcfromtimestamp(os.stat(file).st_mtime)
-    meta, timestamp = readmeta(file)
-    # If EXIF capture time is not available, use mtime
-    if not timestamp:
-        timestamp = mtime
-    cur.execute("insert into kuveja(file, timestamp, meta, mtime) "+ \
-                "values (?, ?, ?, ?)", (file, timestamp, meta, mtime))
-con.commit()
+    def get_metadatas(self):
+        '''Order by mtime, but use capture time'''
+        cur = self.con.cursor()
+        cur.execute("select file, timestamp, meta from kuveja order by mtime desc")
+        metadatas = []
+        for file, timestamp, meta in cur:
+            d = {}
+            d['file'] = file
+            d['timestamp'] = unicode(timestamp)
+            d['meta'] = meta
+            metadatas.append(d)
+        return metadatas
 
-# Order by mtime, but use capture time
-cur.execute("select file, timestamp, meta from kuveja order by mtime desc")
-metadatas = []
-for file, timestamp, meta in cur:
-    d = {}
-    d['file'] = file
-    d['timestamp'] = unicode(timestamp)
-    d['meta'] = meta
-    metadatas.append(d)
+    def __destructor__(self):
+        self.con.close()
 
-json.dump(metadatas, open('kuveja.json', 'w'))
+def update_needed():
+    '''Update is needed if RSS file is newer than input directory'''
+    rssfile = os.path.join(OUTPUTDIR, RSSFILE)
+    try:
+        if os.stat(INPUTDIR).st_mtime < os.stat(rssfile).st_mtime:
+            # Already up to date
+            return True
+    except OSError:
+        # File did not exist or something
+        return False
 
-pichtml = ""
-for d in metadatas[:PICCOUNT]:
-    d['link'] = "%s/%s" % (ROOTURL, d['file'])
-    itemhtml = '<p><img alt="%(link)s" src="%(link)s" /></p>%(meta)s' % d
-    pichtml += "<h3>%s</h3>%s" % (d['file'], itemhtml)
-    r = PyRSS2Gen.RSSItem(
-        title = d['file'],
-        description = itemhtml,
-        link = d['link'],
-        pubDate = d['timestamp'])
-    items.append(r)
+def write_rss(metadatas):
+    rssfile = os.path.join(OUTPUTDIR, RSSFILE)
+    items = []
+    pichtml = ""
+    for d in metadatas[:RSSCOUNT]:
+        d['link'] = "%s/%s" % (ROOTURL, d['file'])
+        itemhtml = '<p><img alt="%(link)s" src="%(link)s" /></p>%(meta)s' % d
+        pichtml += "<h3>%s</h3>%s" % (d['file'], itemhtml)
+        r = PyRSS2Gen.RSSItem(
+            title = d['file'],
+            description = itemhtml,
+            link = d['link'],
+            pubDate = d['timestamp'])
+        items.append(r)
 
-rss = PyRSS2Gen.RSS2(
-    title = TITLE,
-    link = LINKURL,
-    description = DESCRIPTION,
-    lastBuildDate = datetime.now(),
-    items = items)
-rss.write_xml(open(RSSFILE, "w"))
+    rss = PyRSS2Gen.RSS2(
+        title = TITLE,
+        link = LINKURL,
+        description = DESCRIPTION,
+        lastBuildDate = datetime.now(),
+        items = items)
+    with open(rssfile, "w") as f:
+        rss.write_xml(f)
+        f.write("\n")
 
-con.close()
-sys.exit(0)
+def main():
+    if update_needed():
+        # Already up to date
+        sys.exit(0)
+    cache = Cache(DBFILE)
+    files = glob.glob(os.path.join(INPUTDIR, GLOBFILTER))
+    cache.update(files)
+    metadatas = cache.get_metadatas()
+
+    # Simply dump metadatas as a JSON file
+    jsonfile = os.path.join(OUTPUTDIR, JSONFILE)
+    json.dump(metadatas, open(jsonfile, 'w'))
+
+    # Generate the RSS feed
+    write_rss(metadatas)
+
+    # Done
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()
