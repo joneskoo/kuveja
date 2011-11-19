@@ -104,9 +104,9 @@ class Cache:
         cur = self.con.cursor()
         cur.execute("select file, timestamp, meta from kuveja order by mtime desc")
         metadatas = []
-        for file, timestamp, meta in cur:
+        for fname, timestamp, meta in cur:
             d = {}
-            d['file'] = file
+            d['file'] = os.path.basename(fname)
             d['timestamp'] = unicode(timestamp)
             d['meta'] = meta
             metadatas.append(d)
