@@ -72,6 +72,7 @@ class Cache:
         self.existing_files = existing_files
 
     def update(self, files):
+        cur = self.con.cursor()
         def not_in(fname, files):
             if fname not in files:
                 return True
@@ -154,7 +155,7 @@ def write_rss(metadatas):
 
 def templatefill(template, data):
     for key, value in data.items():
-        replacekey = '__{}__'.format(key.upper())
+        replacekey = '__%s__' % key.upper()
         template = template.replace(replacekey, value)
     return template
 
@@ -162,21 +163,23 @@ def write_html(metadatas):
     htmlfile = os.path.join(OUTPUTDIR, HTMLFILE)
     templatefile = os.path.join(SCRIPTPATH, HTMLTEMPLATE)
     with open(templatefile, 'r') as f:
-        template = f.read()
+        template = f.read().decode("UTF-8")
     HTMLIMG = """  <div class="kuva">
         <h3>%(title)s</h3>
         <img src="%(url)s" alt="%(title)s" />
       </div>"""
     images = ""
-    for meta in metadatas:
-        images.append(HTMLIMG % meta)
+    for meta in metadatas[:HTMLCOUNT]:
+        images += HTMLIMG % dict(title=meta['file'],
+                                 url="%s/%s" % (ROOTURL, meta['file']))
+
     data = dict(title=TITLE,
                 rss_url=RSSURL,
                 kuveja=images,
                 initial_count=str(HTMLCOUNT))
     output = templatefill(template, data)
     with open(htmlfile, 'w') as f:
-        f.write(output)
+        f.write(output.encode("UTF-8"))
 
 def main():
     if update_needed() and False:
