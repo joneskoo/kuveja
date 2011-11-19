@@ -17,24 +17,41 @@ except:
 
 from meta import readmeta
 
-mypath = os.path.dirname(__file__)
+SCRIPTPATH = os.path.dirname(__file__)
 
 # Read configs
 config = ConfigParser.ConfigParser()
-config.read(os.path.join(mypath, 'kuveja.cfg'))
+config.read(os.path.join(SCRIPTPATH, 'kuveja.cfg'))
 config.read(['kuveja.cfg', os.path.expanduser('~/.kuveja.cfg')])
 
-INPUTDIR = config.get('source', 'inputdir')
+# Cache
+DBFILE = config.get('cache', 'db')
+
+# General settings
+INPUTDIR = os.path.expanduser(config.get('source', 'inputdir'))
 GLOBFILTER = config.get('source', 'globfilter')
-OUTPUTDIR = config.get('target', 'outputdir')
+OUTPUTDIR = os.path.expanduser(config.get('target', 'outputdir'))
+
+# RSS output
 TITLE = config.get('rss', 'title')
 DESCRIPTION = config.get('rss', 'description')
 ROOTURL = config.get('rss', 'mediaurl')
 LINKURL = config.get('rss', 'linkurl')
 RSSFILE = config.get('target', 'rssname')
-JSONFILE = config.get('target', 'jsonname')
+RSSURL = config.get('rss', 'feedurl')
 RSSCOUNT = config.getint('rss', 'count')
-DBFILE = config.get('cache', 'db')
+
+# JSON output
+JSONFILE = config.get('target', 'jsonname')
+
+# HTML output
+HTMLFILE = config.get('target', 'htmlname')
+HTMLTEMPLATE = config.get('html', 'template')
+HTMLCOUNT = config.getint('html', 'initialcount')
+HTMLIMG = """  <div class="kuva">
+    <h3>%(title)s</h3>
+    <img src="%(url)s" alt="%(title)s" />
+  </div>"""
 
 class Cache:
     existing_files = []
@@ -60,9 +77,13 @@ class Cache:
                 return True
             return False
 
-        new_files = [x for x in files if not_in(x, files)]
         existing = self.existing_files
+        new_files = [x for x in files if not_in(x, existing)]
         deleted_files = [x for x in existing if not_in(x, existing)]
+        # print "list", files
+        # print "existing", existing
+        # print "deleted", deleted_files
+        # print "new", new_files
 
         # Remove files that no longer exist
         for fname in deleted_files:
@@ -131,8 +152,34 @@ def write_rss(metadatas):
         rss.write_xml(f)
         f.write("\n")
 
+def templatefill(template, data):
+    for key, value in data.items():
+        replacekey = '__{}__'.format(key.upper())
+        template = template.replace(replacekey, value)
+    return template
+
+def write_html(metadatas):
+    htmlfile = os.path.join(OUTPUTDIR, HTMLFILE)
+    templatefile = os.path.join(SCRIPTPATH, HTMLTEMPLATE)
+    with open(templatefile, 'r') as f:
+        template = f.read()
+    HTMLIMG = """  <div class="kuva">
+        <h3>%(title)s</h3>
+        <img src="%(url)s" alt="%(title)s" />
+      </div>"""
+    images = ""
+    for meta in metadatas:
+        images.append(HTMLIMG % meta)
+    data = dict(title=TITLE,
+                rss_url=RSSURL,
+                kuveja=images,
+                initial_count=str(HTMLCOUNT))
+    output = templatefill(template, data)
+    with open(htmlfile, 'w') as f:
+        f.write(output)
+
 def main():
-    if update_needed():
+    if update_needed() and False:
         # Already up to date
         sys.exit(0)
     cache = Cache(DBFILE)
@@ -144,8 +191,9 @@ def main():
     jsonfile = os.path.join(OUTPUTDIR, JSONFILE)
     json.dump(metadatas, open(jsonfile, 'w'))
 
-    # Generate the RSS feed
+    # Generate the RSS feed and HTML
     write_rss(metadatas)
+    write_html(metadatas)
 
     # Done
     sys.exit(0)

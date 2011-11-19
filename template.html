@@ -1,38 +1,48 @@
-<html>
-<head>
- <title>joneskoon kuvafeedi</title>
- <link rel="alternate" title="kuveja RSS" href="http://joneskoo.kapsi.fi/kuveja.rss" type="application/rss+xml">
- <link rel="stylesheet" href="style.css" type="text/css" media="screen"/> 
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"></script> 
-<script type="text/javascript"> 
+---
+layout: main
+title: __TITLE__
+rss: __RSS_URL__
+---
+<p>Kuveja joneskoon elämän varrelta.
+Saatavana myös <a href="__RSS_URL__">RSS:nä</a>.</p>
+
+<div id="kuveja">
+
+__KUVEJA__
+
+  <div class='clear' id='endkuveja'></div>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"
+        type="text/javascript"></script>
+<script language="Javascript" type="text/javascript">
+//<![CDATA[
+
 var kuveja;
-var index = __KUVEJA_PIC_COUNT__;
+var index = __INITIAL_COUNT__;
+var prefix = "/kuveja/";
+
+function load_bottom () {
+    var k = kuveja[index++];
+    var html = $('<div class="kuva"><h3></h3><img/></div>');
+    $("h3", html)[0].textContent = k['file'];
+    var img = $("img", html)[0]
+    img.src = prefix + k['file'];
+    img.alt = k['file'];
+    $("#kuveja").append(html);
+}
+
 $(document).ready(function() {
-    $.getJSON('kuveja.json', function(data) {
-        kuveja = data;
-    });
+    $.getJSON('/kuveja/kuveja.json', function(data) { kuveja = data; });
 
     $(window).scroll(function(){
         var pixels_to_bottom = ($(document).height() - $(window).height()) - $(window).scrollTop();
-        if (pixels_to_bottom < 100){
+        if (pixels_to_bottom < 250){
+            load_bottom();
+            load_bottom();
             load_bottom();
         }
     });
 });
-
-function load_bottom() {
-    var k = kuveja[index++];
-    var html = "<h3>" + k['file'] + "</h3><p><img src=\"" + k['file'] + "\" /></p>" + k['meta'];
-    $('#bottom').replaceWith(html + "<div id=\"bottom\">&nbsp;</div>");
-    $(window).scroll();
-}
-</script> 
-</head>
-<body>
- <h1>joneskoon kuvafeedi</h1>
- <p>Kuveja joneskoon elämän varrelta. Live as it happens.</p>
- 
-__KUVEJA_INITIAL_PICS__
- 
- <div id="bottom">&nbsp;</div>
-</body></html>
+//]]>
+</script>
