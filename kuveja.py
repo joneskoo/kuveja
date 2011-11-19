@@ -148,7 +148,7 @@ def write_rss(metadatas):
         lastBuildDate = datetime.now(),
         items = items)
     with open(rssfile, "w") as f:
-        rss.write_xml(f)
+        rss.write_xml(f, encoding="UTF-8")
         f.write("\n")
 
 def templatefill(template, data):
