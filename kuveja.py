@@ -182,7 +182,7 @@ def write_html(metadatas):
         f.write(output.encode("UTF-8"))
 
 def main():
-    if update_needed() and False:
+    if update_needed():
         # Already up to date
         sys.exit(0)
     cache = Cache(DBFILE)
