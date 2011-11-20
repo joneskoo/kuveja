@@ -17,11 +17,12 @@ except:
 
 from meta import readmeta
 
-SCRIPTPATH = os.path.dirname(__file__)
-
 # Read configs
 config = ConfigParser.ConfigParser()
+# Default config from the same directory as this script
+SCRIPTPATH = os.path.dirname(__file__)
 config.read(os.path.join(SCRIPTPATH, 'kuveja.cfg'))
+# User config overrides from the working directory or dot file in home
 config.read(['kuveja.cfg', os.path.expanduser('~/.kuveja.cfg')])
 
 # Cache
