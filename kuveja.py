@@ -56,9 +56,13 @@ HTMLIMG = """  <div class="kuva">
     <img src="%(url)s" alt="%(title)s" />
   </div>"""
 
+def make_metadata_dict(fname, timestamp, meta):
+    return dict(file=os.path.basename(fname),
+                meta=meta,
+                timestamp=unicode(timestamp))
+
 class Cache:
     # TODO: configurable database fields
-    # TODO: metadata function should be passed as a callback or something
     existing_files = []
 
     def __init__(self, dbfile):
@@ -76,7 +80,7 @@ class Cache:
             existing_files = []
         self.existing_files = existing_files
 
-    def update(self, files):
+    def update(self, files, callback):
         cur = self.con.cursor()
         def not_in(fname, files):
             if fname not in files:
@@ -93,11 +97,7 @@ class Cache:
 
         # Read metadata of existing files into cache
         for fname in new_files:
-            mtime = datetime.utcfromtimestamp(os.stat(fname).st_mtime)
-            meta, timestamp = readmeta(fname)
-            # If EXIF capture time is not available, use mtime
-            if not timestamp:
-                timestamp = mtime
+            timestamp, meta, mtime = callback(fname)
             cur.execute("insert into kuveja(file, timestamp, meta, mtime) "+ \
                         "values (?, ?, ?, ?)", (fname, timestamp, meta, mtime))
         self.con.commit()
@@ -106,13 +106,7 @@ class Cache:
         '''Order by mtime, but use capture time'''
         cur = self.con.cursor()
         cur.execute("select file, timestamp, meta from kuveja order by mtime desc")
-        metadatas = []
-        for fname, timestamp, meta in cur:
-            d = {}
-            d['file'] = os.path.basename(fname)
-            d['timestamp'] = unicode(timestamp)
-            d['meta'] = meta
-            metadatas.append(d)
+        metadatas = [make_metadata_dict(*x) for x in cur]
         return metadatas
 
     def __del__(self):
@@ -182,14 +176,45 @@ def write_html(metadatas):
     with open(htmlfile, 'w') as f:
         f.write(output.encode("UTF-8"))
 
+
+def metadata_read(fname):
+    mtime = datetime.utcfromtimestamp(os.stat(fname).st_mtime)
+    meta, timestamp = readmeta(fname)
+    # If EXIF capture time is not available, use mtime
+    if not timestamp:
+        timestamp = mtime
+    return timestamp, meta, mtime
+
+class MetadataReader(object):
+    """Get metadata from images"""
+    def __init__(self, globstring, cache=None):
+        super(MetadataReader, self).__init__()
+        self.globstring = globstring
+        if cache:
+            self.cache = Cache(cache)
+        else:
+            self.cache = None
+
+    def read(self):
+        files = glob.glob(self.globstring)
+        if self.cache:
+            self.cache.update(files, metadata_read)
+            metadatas = self.cache.get_metadatas()
+        else:
+            metadatas = []
+            for fname in files:
+                timestamp, meta, mtime = metadata_read(fname)
+                d = make_metadata_dict(fname, timestamp, meta)
+                metadatas.append(d)
+        return metadatas
+
 def main():
     if update_needed() and UPTODATECHECK:
         # Already up to date
         sys.exit(0)
-    cache = Cache(DBFILE)
-    files = glob.glob(os.path.join(INPUTDIR, GLOBFILTER))
-    cache.update(files)
-    metadatas = cache.get_metadatas()
+    globstring = os.path.join(INPUTDIR, GLOBFILTER)
+    reader = MetadataReader(globstring, cache=DBFILE)
+    metadatas = reader.read()
 
     # Simply dump metadatas as a JSON file
     jsonfile = os.path.join(OUTPUTDIR, JSONFILE)
