@@ -26,7 +26,10 @@ config.read(os.path.join(SCRIPTPATH, 'kuveja.cfg'))
 config.read(['kuveja.cfg', os.path.expanduser('~/.kuveja.cfg')])
 
 # Cache
-DBFILE = config.get('cache', 'db')
+try:
+    DBFILE = config.get('cache', 'db')
+except:
+    DBFILE = None
 
 # General settings
 INPUTDIR = os.path.expanduser(config.get('source', 'inputdir'))
