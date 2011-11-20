@@ -55,6 +55,8 @@ HTMLIMG = """  <div class="kuva">
     <h3>%(title)s</h3>
     <img src="%(url)s" alt="%(title)s" />
   </div>"""
+RSSIMG = '  <h3>%(title)s</h3><p><img alt="%(title)s" src="%(url)s" /></p>' \
+         + '%(meta)s'
 
 def update_needed():
     '''Update is needed if RSS file is newer than input directory'''
@@ -72,13 +74,13 @@ def write_rss(metadatas):
     items = []
     pichtml = ""
     for d in metadatas[:RSSCOUNT]:
-        d['link'] = "%s/%s" % (RSSMEDIA, d['file'])
-        itemhtml = '<p><img alt="%(link)s" src="%(link)s" /></p>%(meta)s' % d
-        pichtml += "<h3>%s</h3>%s" % (d['file'], itemhtml)
+        d['url'] = "%s/%s" % (RSSMEDIA, d['file'])
+        d['title'] = d['file']
+        itemhtml = RSSIMG % d
         r = PyRSS2Gen.RSSItem(
             title = d['file'],
             description = itemhtml,
-            link = d['link'],
+            link = d['url'],
             pubDate = d['timestamp'])
         items.append(r)
 
