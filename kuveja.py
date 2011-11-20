@@ -32,6 +32,7 @@ DBFILE = config.get('cache', 'db')
 INPUTDIR = os.path.expanduser(config.get('source', 'inputdir'))
 GLOBFILTER = config.get('source', 'globfilter')
 OUTPUTDIR = os.path.expanduser(config.get('target', 'outputdir'))
+UPTODATECHECK = config.getboolean('source', 'uptodatecheck')
 
 # RSS output
 TITLE = config.get('rss', 'title')
@@ -182,7 +183,7 @@ def write_html(metadatas):
         f.write(output.encode("UTF-8"))
 
 def main():
-    if update_needed():
+    if update_needed() and UPTODATECHECK:
         # Already up to date
         sys.exit(0)
     cache = Cache(DBFILE)
