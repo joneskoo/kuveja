@@ -36,7 +36,7 @@ OUTPUTDIR = os.path.expanduser(config.get('target', 'outputdir'))
 # RSS output
 TITLE = config.get('rss', 'title')
 DESCRIPTION = config.get('rss', 'description')
-ROOTURL = config.get('rss', 'mediaurl')
+RSSMEDIA = config.get('rss', 'mediaurl')
 LINKURL = config.get('rss', 'linkurl')
 RSSFILE = config.get('target', 'rssname')
 RSSURL = config.get('rss', 'feedurl')
@@ -48,6 +48,7 @@ JSONFILE = config.get('target', 'jsonname')
 # HTML output
 HTMLFILE = config.get('target', 'htmlname')
 HTMLTEMPLATE = config.get('html', 'template')
+HTMLMEDIA = config.get('html', 'mediaurl')
 HTMLCOUNT = config.getint('html', 'initialcount')
 HTMLIMG = """  <div class="kuva">
     <h3>%(title)s</h3>
@@ -132,7 +133,7 @@ def write_rss(metadatas):
     items = []
     pichtml = ""
     for d in metadatas[:RSSCOUNT]:
-        d['link'] = "%s/%s" % (ROOTURL, d['file'])
+        d['link'] = "%s/%s" % (RSSMEDIA, d['file'])
         itemhtml = '<p><img alt="%(link)s" src="%(link)s" /></p>%(meta)s' % d
         pichtml += "<h3>%s</h3>%s" % (d['file'], itemhtml)
         r = PyRSS2Gen.RSSItem(
@@ -170,7 +171,7 @@ def write_html(metadatas):
     images = ""
     for meta in metadatas[:HTMLCOUNT]:
         images += HTMLIMG % dict(title=meta['file'],
-                                 url="%s/%s" % (ROOTURL, meta['file']))
+                                 url="%s/%s" % (HTMLMEDIA, meta['file']))
 
     data = dict(title=TITLE,
                 rss_url=RSSURL,
