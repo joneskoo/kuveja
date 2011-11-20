@@ -15,7 +15,6 @@ except:
     import simplejson as json
 
 from meta import readmeta
-from cache import Cache
 
 # Read configs
 config = ConfigParser.ConfigParser()
@@ -140,6 +139,7 @@ class MetadataReader(object):
         super(MetadataReader, self).__init__()
         self.globstring = globstring
         if cache:
+            from cache import Cache
             self.cache = Cache(cache)
         else:
             self.cache = None
