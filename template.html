@@ -23,6 +23,9 @@ var index = __INITIAL_COUNT__;
 var prefix = "/kuveja/";
 
 function load_bottom () {
+    if (index % 10 == 0) {
+      _gaq.push(['_trackEvent', 'Kuveja', 'Load more images', '', index]);
+    }
     var k = kuveja[index++];
     var html = $('<div class="kuva"><h3></h3><img/></div>');
     $("h3", html)[0].textContent = k['file'];
